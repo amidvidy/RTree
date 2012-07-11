@@ -318,6 +318,34 @@ var RTree = function(width){
 		return(node);
 	};
 
+    /* non-recursive internal visit function. Visitor will be applied to each object in the subtree.
+     * undefined = _visit_subtree(rectangle, visitor, root to begin search at)
+     * @private
+     */
+    var _visit_subtree = function(rect, visitor, root) {
+        var hit_stack = []
+        
+        if(!RTree.Rectangle.overlap_rectangle(rect, root))
+            return;
+
+        hit_stack.push(root.nodes);
+        
+        do {
+            var nodes = hit_stack.pop();
+
+            for (var i = nodes.length - 1; i >= 0; i--) {
+                var ltree = nodes[i];
+                if (RTree.Rectangle.overlap_rectangle(rect, ltree)) {
+                    if ("nodes" in ltree) {
+                        hit_stack.push(ltree.nodes);
+                    } else if ("leaf" in ltree) {
+                        visitor(ltree.leaf);
+                    }
+                }
+            }
+        } while (hit_stack.length > 0);   
+    }
+
 	/* non-recursive internal search function 
 	 * [ nodes | objects ] = _search_subtree(rectangle, [return node data], [array to fill], root to begin search at)
 	 * @private
@@ -453,14 +481,27 @@ var RTree = function(width){
 			where = _T;
 		return(_attach_data(where, new_tree));
 	};
-	
+
+    /* non-recursive visit function
+     * undefined = RTree.visit(rectangle, visitor)
+     * @public
+     */
+	this.visit = function(rect, visitor) {
+        if (arguments.length !== 2)
+            throw "Wrong number of arguments. RT.Visit requires bounding rectangle and a visitor";
+        
+        arguments[3] = _T; // pass the root node
+
+        _visit_subtree.apply(this, arguments);
+    }
+
 	/* non-recursive search function 
 	 * [ nodes | objects ] = RTree.search(rectangle, [return node data], [array to fill])
 	 * @public
 	 */
 	this.search = function(rect, return_node, return_array) {
 		if(arguments.length < 1)
-			throw "Wrong number of arguments. RT.Search requires at least a bounding rectangle."
+			throw "Wrong number of arguments. RT.Search requires at least a bounding rectangle.";
 
 		switch(arguments.length) {
 			case 1:
